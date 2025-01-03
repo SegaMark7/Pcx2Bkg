@@ -28,9 +28,10 @@ public class PCXToBackground
         }
     }
 
-    
 
-    PCXImage Img = new();
+
+    static PCXImage Img;
+    static Palette Pal;
 
     int Planes;
     int Width, Height;
@@ -42,7 +43,6 @@ public class PCXToBackground
     readonly ushort[,] BkgMap = new ushort[2, MAX_TILECOUNT];
     byte[] PalMap = new byte[32];
 
-    byte[,] Pal = new byte[32, 3];
 
     void CalcPlanes()
     {
@@ -102,40 +102,38 @@ public class PCXToBackground
 
     void OutFile(string outputFile)
     {
-        using (FileStream fs = new FileStream(outputFile, FileMode.Create))
-        using (BinaryWriter writer = new BinaryWriter(fs))
+        using FileStream fs = new(outputFile, FileMode.Create);
+        using BinaryWriter writer = new(fs);
+        writer.Write(new char[] { 'B', 'K', 'G', '\0' }); // Signature
+        writer.Write((ushort)0x0101); // Version
+        writer.Write((ushort)OptimCount);
+        writer.Write((ushort)Width);
+        writer.Write((ushort)Height);
+        writer.Write((ushort)Planes);
+
+        for (int i = 0; i < OptimCount; i++)
         {
-            writer.Write(new char[] { 'B', 'K', 'G', '\0' }); // Signature
-            writer.Write((ushort)0x0101); // Version
-            writer.Write((ushort)OptimCount);
-            writer.Write((ushort)Width);
-            writer.Write((ushort)Height);
-            writer.Write((ushort)Planes);
+            GenTile gen = new();
+            RawToGen(ref Original[i], ref gen);
+            foreach (var b in gen.Data)
+                writer.Write(b);
+        }
 
-            for (int i = 0; i < OptimCount; i++)
-            {
-                GenTile gen = new GenTile();
-                RawToGen(ref Original[i], ref gen);
-                foreach (var b in gen.Data)
-                    writer.Write(b);
-            }
+        for (int i = 0; i < Planes; i++)
+        {
+            for (int j = 0; j < Width * Height; j++)
+                writer.Write((ushort)BkgMap[i, j]);
+        }
 
-            for (int i = 0; i < Planes; i++)
+        for (int i = 0; i < Planes; i++)
+        {
+            for (int j = 0; j < 16; j++)
             {
-                for (int j = 0; j < Width * Height; j++)
-                    writer.Write((ushort)BkgMap[i, j]);
-            }
-
-            for (int i = 0; i < Planes; i++)
-            {
-                for (int j = 0; j < 16; j++)
-                {
-                    int idx = j + (i == 0 ? 0 : 16);
-                    ushort w = (ushort)((Pal[idx, 2] >> 2 & 0x0E) << 8 |
-                                        (Pal[idx, 1] >> 2 & 0x0E) << 4 |
-                                        (Pal[idx, 0] >> 2 & 0x0E));
-                    writer.Write(w);
-                }
+                int idx = j + (i == 0 ? 0 : 16);
+                ushort w = (ushort)((Pal[idx, 2] >> 2 & 0x0E) << 8 |
+                                    (Pal[idx, 1] >> 2 & 0x0E) << 4 |
+                                    (Pal[idx, 0] >> 2 & 0x0E));
+                writer.Write(w);
             }
         }
     }
@@ -144,7 +142,7 @@ public class PCXToBackground
     {
         if (args.Length < 2)
         {
-            Console.WriteLine("PCXToBackground v1.1 by SegaMark");
+            Console.WriteLine("PCXToBackground by SegaMark");
             Console.WriteLine("USAGE: PCXToBackground <image.pcx> <outfile>");
             Environment.Exit(1);
         }
@@ -152,8 +150,8 @@ public class PCXToBackground
         var program = new PCXToBackground();
 
         // Загрузка данных PCX и палитры (предполагается, что функции реализованы)
-        PCXHandler.AllocReadPCX(out program.Img, args[0]);
-        // GetPCXPalette(program.Pal, args[0]);
+        Img = PCXHandler.AllocReadPCX(args[0]);
+        PCXHandler.GetPcxPalette(ref Pal, args[0]);
 
         program.CalcPlanes();
         program.ReadTiles();

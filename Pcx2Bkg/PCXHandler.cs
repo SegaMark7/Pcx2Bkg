@@ -40,11 +40,11 @@ namespace Pcx2Bkg
             Console.WriteLine("PCX Image Loaded Successfully.");
         }
 
-        public static void AllocReadPCX(out PCXImage img, string fileName)
+        public static PCXImage AllocReadPCX(string fileName)
         {
             LoadPCXHeader(fileName);
 
-            img = new PCXImage
+            PCXImage img = new()
             {
                 Width = pcxHeader.XMax - pcxHeader.XMin + 1,
                 Height = pcxHeader.YMax - pcxHeader.YMin + 1,
@@ -53,9 +53,14 @@ namespace Pcx2Bkg
             DecodePCX(ref img);
 
             Console.WriteLine("PCX Image Allocated and Loaded Successfully.");
+            return img;
         }
 
-        // Read PCX Palette
+        /// <summary>
+        /// Read PCX Palette
+        /// </summary>
+        /// <param name="pal"></param>
+        /// <param name="fileName"></param>
         public static void GetPcxPalette(ref Palette pal, string fileName)
         {
             using var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read);
@@ -73,7 +78,7 @@ namespace Pcx2Bkg
 
         private static void LoadPCXHeader(string fileName)
         {
-            using var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+            using FileStream fileStream = new(fileName, FileMode.Open, FileAccess.Read);
             var buffer = new byte[Marshal.SizeOf<PCXHeader>()];
             fileStream.Read(buffer, 0, buffer.Length);
 
@@ -128,10 +133,5 @@ namespace Pcx2Bkg
             handle.Free();
             return obj;
         }
-    }
-
-    public class Palette
-    {
-        public byte[,] Colors { get; } = new byte[256, 3];
     }
 }
