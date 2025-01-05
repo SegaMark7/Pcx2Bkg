@@ -37,7 +37,9 @@ public class PCXToBackground
     int HTileCount, VTileCount;
 
     static RawTile[] Original;
+    RawTile[] Optimized = new RawTile[MAX_TILECOUNT];
     int[] OrigCheckSums = new int[MAX_TILECOUNT];
+    int[] OptimCheckSums = new int[MAX_TILECOUNT];
     int OptimCount;
 
     readonly ushort[,] BkgMap = new ushort[2, MAX_TILECOUNT];
@@ -107,6 +109,128 @@ public class PCXToBackground
         }
     }
 
+    public void DisplayOriginal()
+    {
+        for (int i = 0; i < VTileCount; i++)
+        {
+            for (int j = 0; j < HTileCount; j++)
+            {
+                //DisplayTile(8 * j, 8 * i, Original[i * HTileCount + j]);
+            }
+        }
+    }
+
+    int CalcDifference(RawTile tile1, RawTile tile2)
+    {
+        int diff = 0;
+
+        for (int i = 0; i < 8; i++)
+        {
+            for (int j = 0; j < 8; j++)
+            {
+                diff += Math.Abs(tile1.Tile[i, j] - tile2.Tile[i, j]);
+            }
+        }
+
+        return diff;
+    }
+
+    int GetSimilarTile(ref RawTile tile, int checkSum)
+    {
+        int i = 0;
+
+        while (i < OptimCount &&
+               (OptimCheckSums[i] != checkSum || CalcDifference(tile, Optimized[i]) > 0))
+        {
+            i++;
+        }
+
+        if (i == OptimCount)
+        {
+            Optimized[i] = tile;
+            OptimCheckSums[i] = checkSum;
+            OptimCount++;
+        }
+
+        return i;
+    }
+
+    public void Optimize()
+    {
+        OptimCount = 0;
+
+        for (int i = 0; i < Planes; i++)
+        {
+            for (int j = 0; j < HTileCount * VTileCount; j++)
+            {
+                int idx = i * HTileCount * VTileCount + j;
+                //BkgMap[i, j] = GetSimilarTile(ref Original[idx], OptimCheckSums[idx]);
+            }
+        }
+    }
+
+    public void CreateSimplePaletteMap()
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            PalMap[i] = (byte)i;
+        }
+        for (int i = 16; i < 32; i++)
+        {
+            PalMap[i] = (byte)(i - 15);
+        }
+    }
+
+    public void NextPaletteMap()
+    {
+        bool overflow = true;
+        int i = 15;
+
+        while (i >= 0 && overflow)
+        {
+            overflow = false;
+            PalMap[i]++;
+
+            if (PalMap[i] > (31 - 15) + i)
+            {
+                overflow = true;
+                PalMap[i] = (byte)(PalMap[i - 1] + 2);
+            }
+
+            i--;
+        }
+
+        bool[] used = new bool[32];
+        for (int idx = 0; idx < 32; idx++) used[idx] = false;
+
+        for (int idx = 0; idx < 16; idx++) used[PalMap[idx]] = true;
+
+        int newIdx = 0;
+        for (int idx = 16; idx < 32; idx++)
+        {
+            while (used[newIdx]) newIdx++;
+            PalMap[idx] = (byte)newIdx;
+            used[newIdx] = true;
+        }
+    }
+
+    public void ProcessTiles()
+    {
+        CreateSimplePaletteMap();
+        ReadTiles();
+        Optimize();
+    }
+
+    public string HexByte(byte b)
+    {
+        return b.ToString("X2");
+    }
+
+    public string HexWord(ushort w)
+    {
+        return w.ToString("X4");
+    }
+
     void RawToGen(ref RawTile src, ref GenTile dst)
     {
         for (int i = 0; i < TILE_HEIGHT; i++)
@@ -117,6 +241,30 @@ public class PCXToBackground
             }
         }
     }
+
+    private void WriteTile(ref RawTile raw)
+    {
+        GenTile gen = new GenTile();
+
+        RawToGen(ref raw, ref gen);
+
+        for (int i = 0; i < 8; i++)
+        {
+            Console.Write("dc.l $");
+            for (int j = 0; j < 4; j++)
+            {
+                Console.Write(HexByte(gen.Data[i, j]));
+            }
+            Console.WriteLine();
+        }
+    }
+
+    private void PutPixel(int x, int y, byte color)
+    {
+        // Реализация для вывода пикселя
+    }
+
+    
 
     void OutFile(string outputFile)
     {
