@@ -31,7 +31,7 @@ public class PCXToBackground
 
 
     static PCXImage Img;
-    static Palette Pal;
+    static Palette Pal = new();
 
     int Planes;
     int Width, Height;
@@ -43,7 +43,7 @@ public class PCXToBackground
     readonly ushort[,] BkgMap = new ushort[2, MAX_TILECOUNT];
     byte[] PalMap = new byte[32];
 
-
+    //TODO выяснить для чего функция
     void CalcPlanes()
     {
         int colors = 0;
@@ -80,7 +80,7 @@ public class PCXToBackground
                         if (color < minColor || color > maxColor)
                             color = 0;
                         else
-                            color = PalMap[color];
+                            color = PalMap[color];//TODO массив нигде не заполняется
                         Original[idx].Data[i, j] = color;
                         OrigCheckSums[idx] += color;
                     }
@@ -130,10 +130,10 @@ public class PCXToBackground
             for (int j = 0; j < 16; j++)
             {
                 int idx = j + (i == 0 ? 0 : 16);
-                ushort w = (ushort)((Pal[idx, 2] >> 2 & 0x0E) << 8 |
-                                    (Pal[idx, 1] >> 2 & 0x0E) << 4 |
-                                    (Pal[idx, 0] >> 2 & 0x0E));
-                writer.Write(w);
+                //ushort w = (ushort)((Pal[idx, 2] >> 2 & 0x0E) << 8 |
+                //                    (Pal[idx, 1] >> 2 & 0x0E) << 4 |
+                //                    (Pal[idx, 0] >> 2 & 0x0E));
+                //writer.Write(w);
             }
         }
     }

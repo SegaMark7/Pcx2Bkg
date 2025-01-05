@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Drawing;
+using System.Runtime.InteropServices;
 
 namespace Pcx2Bkg
 {
@@ -70,9 +71,11 @@ namespace Pcx2Bkg
 
             for (int i = 0; i < 256; i++)
             {
-                pal.Colors[i, 0] = (byte)(paletteData[i * 3] >> 2);   // Red
-                pal.Colors[i, 1] = (byte)(paletteData[i * 3 + 1] >> 2); // Green
-                pal.Colors[i, 2] = (byte)(paletteData[i * 3 + 2] >> 2); // Blue
+                int r = paletteData[i * 3] >> 2;   // Red
+                int g = paletteData[i * 3 + 1] >> 2; // Green
+                int b = paletteData[i * 3 + 2] >> 2; // Blue
+
+                pal.Colors[i] = Color.FromArgb(r << 2, g << 2, b << 2); // Преобразуем значения обратно в диапазон 0-255
             }
         }
 

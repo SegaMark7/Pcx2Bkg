@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 
-namespace Pcx2Bkg
+namespace Pcx2Bkg;
+
+public class Palette
 {
-    public class Palette
-    {
-        public byte[,] Colors { get; } = new byte[256, 3];
-    }
+    public Color[] Colors { get; } = new Color[256];    
 }
