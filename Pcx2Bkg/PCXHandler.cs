@@ -62,13 +62,13 @@ namespace Pcx2Bkg
         /// </summary>
         /// <param name="pal"></param>
         /// <param name="fileName"></param>
-        public static void GetPcxPalette(ref Palette pal, string fileName)
+        public static Palette GetPcxPalette(string fileName)
         {
             using var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read);
             using var reader = new BinaryReader(fs);
             fs.Seek(-768, SeekOrigin.End); // Palette is at the end of the file
             byte[] paletteData = reader.ReadBytes(768);
-
+            Palette pal = new();
             for (int i = 0; i < 256; i++)
             {
                 int r = paletteData[i * 3] >> 2;   // Red
@@ -77,6 +77,7 @@ namespace Pcx2Bkg
 
                 pal.Colors[i] = Color.FromArgb(r << 2, g << 2, b << 2); // Преобразуем значения обратно в диапазон 0-255
             }
+            return pal;
         }
 
         private static void LoadPCXHeader(string fileName)

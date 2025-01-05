@@ -10,11 +10,11 @@ public class PCXToBackground
 
     struct RawTile
     {
-        public byte[,] Data;
+        public byte[,] Tile = new byte[TILE_HEIGHT, TILE_WIDTH];
 
         public RawTile()
         {
-            Data = new byte[TILE_HEIGHT, TILE_WIDTH];
+            Tile = new byte[TILE_HEIGHT, TILE_WIDTH];
         }
     }
 
@@ -34,16 +34,16 @@ public class PCXToBackground
     static Palette Pal = new();
 
     int Planes;
-    int Width, Height;
+    int HTileCount, VTileCount;
 
-    RawTile[] Original = new RawTile[MAX_TILECOUNT];
+    static RawTile[] Original;
     int[] OrigCheckSums = new int[MAX_TILECOUNT];
     int OptimCount;
 
     readonly ushort[,] BkgMap = new ushort[2, MAX_TILECOUNT];
     byte[] PalMap = new byte[32];
 
-    //TODO выяснить для чего функция
+
     void CalcPlanes()
     {
         int colors = 0;
@@ -57,14 +57,16 @@ public class PCXToBackground
 
     void ReadTiles()
     {
-        Width = Img.Width / TILE_WIDTH;
-        Height = Img.Height / TILE_HEIGHT;
+        HTileCount = Img.Width / TILE_WIDTH;
+        VTileCount = Img.Height / TILE_HEIGHT;
+
+        InitOriginal();
 
         for (int l = 0; l < Planes; l++)
         {
-            for (int k = 0; k < Width * Height; k++)
+            for (int k = 0; k < HTileCount * VTileCount; k++)
             {
-                int idx = l * Width * Height + k;
+                int idx = l * HTileCount * VTileCount + k;
                 OrigCheckSums[idx] = 0;
 
                 byte minColor = (byte)(l == 0 ? 0 : 16);
@@ -74,18 +76,34 @@ public class PCXToBackground
                 {
                     for (int j = 0; j < TILE_WIDTH; j++)
                     {
-                        int x = (k % Width) * TILE_WIDTH + j;
-                        int y = (k / Width) * TILE_HEIGHT + i;
+                        int x = (k % HTileCount) * TILE_WIDTH + j;
+                        int y = (k / HTileCount) * TILE_HEIGHT + i;
                         byte color = Img.Data[y * Img.Width + x];
                         if (color < minColor || color > maxColor)
                             color = 0;
                         else
                             color = PalMap[color];//TODO массив нигде не заполняется
-                        Original[idx].Data[i, j] = color;
+                        Original[idx].Tile[i, j] = color;
                         OrigCheckSums[idx] += color;
                     }
                 }
             }
+        }
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <remarks>
+    /// так как при инициализации массива Original конструкто у каждого элемента не будет вызван, приходиться это делать вручную
+    /// </remarks>
+    void InitOriginal()
+    {
+        Original = new RawTile[MAX_TILECOUNT];
+
+        for (int i = 0; i < Original.Length; i++)
+        {
+            Original[i] = new RawTile();
         }
     }
 
@@ -95,7 +113,7 @@ public class PCXToBackground
         {
             for (int j = 0; j < TILE_WIDTH / 2; j++)
             {
-                dst.Data[i, j] = (byte)((src.Data[i, j * 2] & 0x0F) << 4 | (src.Data[i, j * 2 + 1] & 0x0F));
+                dst.Data[i, j] = (byte)((src.Tile[i, j * 2] & 0x0F) << 4 | (src.Tile[i, j * 2 + 1] & 0x0F));
             }
         }
     }
@@ -107,8 +125,8 @@ public class PCXToBackground
         writer.Write(new char[] { 'B', 'K', 'G', '\0' }); // Signature
         writer.Write((ushort)0x0101); // Version
         writer.Write((ushort)OptimCount);
-        writer.Write((ushort)Width);
-        writer.Write((ushort)Height);
+        writer.Write((ushort)HTileCount);
+        writer.Write((ushort)VTileCount);
         writer.Write((ushort)Planes);
 
         for (int i = 0; i < OptimCount; i++)
@@ -121,7 +139,7 @@ public class PCXToBackground
 
         for (int i = 0; i < Planes; i++)
         {
-            for (int j = 0; j < Width * Height; j++)
+            for (int j = 0; j < HTileCount * VTileCount; j++)
                 writer.Write((ushort)BkgMap[i, j]);
         }
 
@@ -130,10 +148,10 @@ public class PCXToBackground
             for (int j = 0; j < 16; j++)
             {
                 int idx = j + (i == 0 ? 0 : 16);
-                //ushort w = (ushort)((Pal[idx, 2] >> 2 & 0x0E) << 8 |
-                //                    (Pal[idx, 1] >> 2 & 0x0E) << 4 |
-                //                    (Pal[idx, 0] >> 2 & 0x0E));
-                //writer.Write(w);
+                ushort w = (ushort)((Pal.Colors[idx].B >> 2 & 0x0E) << 8 |
+                                    (Pal.Colors[idx].G >> 2 & 0x0E) << 4 |
+                                    (Pal.Colors[idx].R >> 2 & 0x0E));
+                writer.Write(w);
             }
         }
     }
@@ -151,7 +169,7 @@ public class PCXToBackground
 
         // Загрузка данных PCX и палитры (предполагается, что функции реализованы)
         Img = PCXHandler.AllocReadPCX(args[0]);
-        PCXHandler.GetPcxPalette(ref Pal, args[0]);
+        Pal = PCXHandler.GetPcxPalette(args[0]);
 
         program.CalcPlanes();
         program.ReadTiles();
