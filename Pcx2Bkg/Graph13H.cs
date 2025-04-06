@@ -2,7 +2,7 @@
 
 namespace Pcx2Bkg
 {
-    public static class Graphics
+    public static class Graph13H
     {
         // Constants
         public const int MinX = 0;

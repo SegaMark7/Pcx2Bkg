@@ -1,7 +1,8 @@
 {
   "profiles": {
     "Pcx2Bkg": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "zoe.pcx zoe.bkg"
     }
   }
 }

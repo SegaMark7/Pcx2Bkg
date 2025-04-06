@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace Pcx2Bkg;
+﻿namespace Pcx2Bkg;
 public class PCXToBackground
 {
     const int MAX_TILECOUNT = 2048;
@@ -97,7 +94,7 @@ public class PCXToBackground
     /// 
     /// </summary>
     /// <remarks>
-    /// так как при инициализации массива Original конструкто у каждого элемента не будет вызван, приходиться это делать вручную
+    /// так как при инициализации массива Original конструктор у каждого элемента не будет вызван, приходиться это делать вручную
     /// </remarks>
     void InitOriginal()
     {
@@ -264,13 +261,13 @@ public class PCXToBackground
         // Реализация для вывода пикселя
     }
 
-    
+
 
     void OutFile(string outputFile)
     {
         using FileStream fs = new(outputFile, FileMode.Create);
         using BinaryWriter writer = new(fs);
-        writer.Write(new char[] { 'B', 'K', 'G', '\0' }); // Signature
+        writer.Write(['B', 'K', 'G', '\0']); // Signature
         writer.Write((ushort)0x0101); // Version
         writer.Write((ushort)OptimCount);
         writer.Write((ushort)HTileCount);
@@ -291,6 +288,7 @@ public class PCXToBackground
                 writer.Write((ushort)BkgMap[i, j]);
         }
 
+        //запись палитры
         for (int i = 0; i < Planes; i++)
         {
             for (int j = 0; j < 16; j++)
@@ -310,12 +308,12 @@ public class PCXToBackground
         {
             Console.WriteLine("PCXToBackground by SegaMark");
             Console.WriteLine("USAGE: PCXToBackground <image.pcx> <outfile>");
-            Environment.Exit(1);
+            return;
         }
 
         var program = new PCXToBackground();
 
-        // Загрузка данных PCX и палитры (предполагается, что функции реализованы)
+        // Загрузка данных PCX и палитры
         Img = PCXHandler.AllocReadPCX(args[0]);
         Pal = PCXHandler.GetPcxPalette(args[0]);
 
